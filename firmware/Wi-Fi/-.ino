@@ -18,7 +18,7 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 uint64_t addr[] = 
 {
-  0x5BBFA55509646128, // OUTPUT sensor  0x596ADB5509646128 0xED81C95509646128
+  0xED81C95509646128, // OUTPUT sensor  0x596ADB5509646128 0xED81C95509646128
 };
 GyverDS18Array ds(12, addr, SENSORS_AMOUNT);
 
@@ -127,6 +127,7 @@ void loop()
   if(WiFi.status()!=WL_CONNECTED) 
   {
     wifi_connected=false;
+    WiFi.begin(SSID, PASS);
   } 
   else 
   {
@@ -291,6 +292,10 @@ void loop()
     lcd.print(':');
     lcd.print(time_spent_s);
 
+    lcd.setCursor(0, 1);
+    lcd.print("                   ");
+    lcd.setCursor(0, 1);
+    lcd.print(wifi_connected ? "Wi-Fi" : "Error");
 
     lcd.setCursor(0, 2);
     lcd.print("                   ");
