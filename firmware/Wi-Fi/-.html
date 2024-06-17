@@ -1,0 +1,252 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"//www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="//www.w3.org/1999/xhtml">
+<head>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>PoolHeatMonitor</title>
+
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+  <!--
+	<link rel="Website Icon" type="png"
+	href="AquaPilotLogo-with-grass.png">
+  -->
+</head>
+
+<body>
+<div style="display:inline-block;">
+  <label style="display:inline-block;">
+    <span>[date]>=</span>
+    <input type="date" id="from_date_inp" value="2024-06-12" style="margin-right:5px;">
+  </label>
+  <label style="display:inline-block;">
+    <span>[date]<=</span>
+    <input type="date" id="to_date_inp" style="margin-right:5px;">
+  </label>
+  <button style="display:block; margin-top:5px;" id="button_send">Apply</button>
+  
+  <br>
+
+  <label style="display:inline-block;">
+    <span>Disable Temp</span>
+    <input type="number" id="disable_temp" style="margin-top:5px;">
+  </label>
+  <label style="display:inline-block;">
+    <span>Enable Temp&nbsp;</span>
+    <input type="number" id="enable_temp" style="margin-top:5px;">
+  </label>
+  <button style="display:block; margin-top:5px; margin-bottom:5px;" id="button_send_temps">Apply</button>
+  <br>
+</div>
+<p style="margin-top:0; font-size:larger;" id="curr_temp_disp">Current Temperature: 50°C</p>
+<div id="daily_plot" style="width:100%; height:100%;"></div>
+<p id="no_data_text" style="display:none;">No Data</p>
+
+<script>
+setTimeout(update_curr_temp, 1000);
+function update_curr_temp()
+{
+  setTimeout(update_curr_temp, 1000);
+  var url='PoolHeatMonitor.php';
+
+  let send_build;
+  send_build='request_temp=last';
+  
+  fetch(url, 
+  {
+    method: 'POST',
+    headers: 
+    {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams(send_build)
+  })
+  .then(response => response.text())
+  .then(text => 
+  {
+    console.log(text);
+    decoded_text_tmp=JSON.parse(text);
+    document.getElementById('curr_temp_disp').innerHTML='Current Temperature: '+decoded_text_tmp.curr_temp+'°C';
+  })
+  .catch(error => 
+  {
+    //console.error('Error:', error);
+  });
+} 
+
+let temps_arr=[];
+let ids_arr=[];
+
+document.getElementById('button_send_temps').addEventListener('click', function() 
+{
+  var url='PoolHeatMonitor.php';
+  var unixTimestamp=Math.floor(Date.now()/1000);
+  var data={date: unixTimestamp};
+
+  let disable_temp_inp_send = document.getElementById('disable_temp').value;
+  let enable_temp_inp_send = document.getElementById('enable_temp').value;
+  if(disable_temp_inp_send>=enable_temp_inp_send)
+  {
+    enable_temp_inp_send=parseInt(disable_temp_inp_send)+1;
+    document.getElementById('enable_temp').value=enable_temp_inp_send;
+  }
+  let send_build;
+  send_build='disable_temp='+disable_temp_inp_send+'&';
+  send_build+='enable_temp='+enable_temp_inp_send;
+  
+  fetch(url, 
+  {
+      method: 'POST',
+      headers: 
+      {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams(send_build)
+  })
+});
+
+document.getElementById('button_send').addEventListener('click', function() 
+{
+  var url='PoolHeatMonitor.php';
+  var unixTimestamp=Math.floor(Date.now()/1000);
+  var data={date: unixTimestamp};
+
+  const date_from_inp_send = document.getElementById('from_date_inp').value;
+  const date_to_inp_send = document.getElementById('to_date_inp').value;
+  let send_build;
+  send_build='request_date_from='+date_from_inp_send+'&';
+  send_build+='request_date_to='+date_to_inp_send;
+  
+  fetch(url, 
+  {
+    method: 'POST',
+    headers: 
+    {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams(send_build)
+  })
+  .then(response => response.text())
+  /*
+  .then(text => 
+  {
+    const json_strings = text.split('][');
+
+    json_strings[0] += ']';
+    for (let i = 1; i < json_strings.length - 1; i++) {
+      json_strings[i] = '[' + json_strings[i] + ']';
+    }
+    json_strings[json_strings.length - 1] = '[' + json_strings[json_strings.length - 1];
+
+    const data_array = json_strings.map(json_str => JSON.parse(json_str));
+
+    return data_array;
+  })
+  .then(data_array => 
+  {
+    console.log(data_array);
+    for(let id=0; id<temps_arr.length; id++) temps_arr[id]=null;
+    for(let id=0; id<ids_arr.length; id++) ids_arr[id]=null;
+    temps_arr.length=0;
+    ids_arr.length=0;
+    for(let id=0; id<data_array.length; id++)
+    {
+      //const decode_arr=JSON.parse(data_array[id]);
+      //temps_arr[id]=decode_arr.temp;
+      if(data_array[id][0].date) {;}
+
+      const date_string=data_array[id][0].date;
+      const [date_part, time_part]=date_string.split(' ');
+      const [year, month, day]=date_part.split('-').map(Number);
+      const [hours, minutes, seconds]=time_part.split(':').map(Number);
+
+      temps_arr[id]=data_array[id][0].temp;
+      ids_arr[id]=data_array[id][0].id;
+
+      //console.log(ids_arr[id]);
+    }
+    let min_val=ids_arr[ids_arr.length-1]-1;
+    for(let id=0; id<ids_arr.length; id++)
+    {
+      ids_arr[id]-=min_val;
+    }
+    console.log('start');
+    console.log(ids_arr);
+    console.log(temps_arr);
+    console.log('end');
+
+    const plot_data= 
+    [{
+      x: ids_arr,
+      y: temps_arr,
+      mode: "lines",
+      type: "scatter"
+    }];
+
+    const plot_layout= 
+    {
+      xaxis: {title: "Measurments"},
+      yaxis: {title: "Temperature"},
+      title: "Graph"
+    };
+
+    Plotly.newPlot("daily_plot", plot_data, plot_layout);
+  })*/
+
+  .then(text => 
+  {
+    if(text.length>0)
+    {
+      temps_arr.length=0;
+      ids_arr.length=0;
+
+      let decoded_text_tmp;
+      decoded_text_tmp=JSON.parse(text);
+
+      console.log('text_arr='+text+"\r\n");
+      
+      for(let id=0; id<decoded_text_tmp.length; id++)
+      {
+        //console.log("decode_text_tmp="+decoded_text_tmp[id].curr_temp);
+        ids_arr[id]=decoded_text_tmp[id].id;
+        temps_arr[id]=decoded_text_tmp[id].curr_temp;
+        //console.log("temps_arr["+id+']='+temps_arr[id]);
+      }
+
+      console.log('start');
+      console.log(ids_arr);
+      console.log(temps_arr);
+      console.log('end');
+    
+      const plot_data= 
+      [{
+        x: ids_arr,
+        y: temps_arr,
+        mode: "lines",
+        type: "scatter"
+      }];
+
+      const plot_layout= 
+      {
+        xaxis: {title: "Measurments"},
+        yaxis: {title: "Temperature"},
+        title: "Graph"
+      };
+
+      Plotly.newPlot("daily_plot", plot_data, plot_layout);
+    }
+    else
+    {
+      console.log('no data');
+      document.getElementById('no_data_text').style.display='block';
+      document.getElementById('daily_plot').style.display='none';
+    }
+  })
+  .catch(error => 
+  {
+    //console.error('Error:', error);
+  });
+});
+</script>
+</body>
