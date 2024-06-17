@@ -5,8 +5,8 @@
 #define SSID "i20"
 #define PASS "yanatarsnazsof5"
 
-#include <LiquidCrystal_I2C.h>
-LiquidCrystal_I2C lcd(0x27, 20, 4);
+//#include <LiquidCrystal_I2C.h>
+//LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 #include <GyverDS18Array.h>
 
@@ -28,6 +28,7 @@ uint32_t wifi_connect_timer;
 uint32_t ui_timer;
 uint32_t check_server_timer;
 uint32_t wifi_disconnect_timer;
+uint32_t wifi_check_timer;
 
 float temps_arr[SENSORS_AMOUNT+1]={30.00, 22.00}; // default temps | id1-output water sensor; id2-input water sensor 
 bool curr_state=false; // true-on; false-off
@@ -38,6 +39,7 @@ float temp_generator=0.0;
 int time_spent_h, time_spent_m, time_spent_s;
 
 bool wifi_connected=false;
+bool wifi_connected_imid=false;
 
 void IRAM_ATTR timer1_interrupt()
 {
@@ -59,11 +61,11 @@ void setup()
   pinMode(4, OUTPUT);
   digitalWrite(4, 1);
 
-  Wire.begin(14, 5);
+  //Wire.begin(14, 5);
 
-  lcd.init();
-  lcd.backlight();
-  lcd.display();
+  //lcd.init();
+  //lcd.backlight();
+  //lcd.display();
 
   ds.requestTemp();
   ds.setResolution(9);
@@ -76,8 +78,8 @@ void setup()
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(SSID, PASS);
-  lcd.setCursor(1, 1);
-  lcd.print("Connecting");
+  //lcd.setCursor(1, 1);
+  //lcd.print("Connecting");
   Serial.print("Connecting");
   wifi_connect_timer=millis();
   bool connection_succesful=true;
@@ -92,26 +94,26 @@ void setup()
     }
     delay(500);
     Serial.print(".");
-    lcd.print(".");
+    //lcd.print(".");
     if(iters>7)
     {
       iters=0;
-      lcd.setCursor(11, 1);
-      lcd.print("         ");
-      lcd.setCursor(11, 1);
+      //lcd.setCursor(11, 1);
+      //lcd.print("         ");
+      //lcd.setCursor(11, 1);
     }
     iters++;
   }
   if(connection_succesful) 
   {
-    lcd.setCursor(1, 1);
-    lcd.print("                   ");
+    //lcd.setCursor(1, 1);
+    //lcd.print("                   ");
     Serial.print("Connected!");
-    lcd.setCursor(3, 1);
-    lcd.print("Connected!");
+    //lcd.setCursor(3, 1);
+    //lcd.print("Connected!");
     delay(1000);
-    lcd.setCursor(1, 1);
-    lcd.print("                   ");
+    //lcd.setCursor(1, 1);
+    //lcd.print("                   ");
   }
   Serial.println();
    
@@ -120,25 +122,31 @@ void setup()
     Serial.print("Local IP: ");
     Serial.println(WiFi.localIP());
   }
-  lcd.clear();
+  //lcd.clear();
 }
 void loop()
 {
-  if(WiFi.status()!=WL_CONNECTED) 
+  if(WiFi.status()!=WL_CONNECTED && wifi_connected && wifi_connected_imid) 
   {
     wifi_connected=false;
+    wifi_connected_imid=false;
     WiFi.begin(SSID, PASS);
+    wifi_check_timer=millis();
   } 
   else 
   {
-    wifi_connected=true;
+    wifi_connected_imid=true;
+    if(millis()-wifi_check_timer>=2000)
+    {
+      wifi_connected=true;
+    }
   }
   if(millis()-blink_timer>=1000)
   {
     blink_timer=millis();
     blink_status=!blink_status;
-    lcd.setCursor(19, 3);
-    lcd.print(blink_status ? "A" : "T");
+    //lcd.setCursor(19, 3);
+    //lcd.print(blink_status ? "A" : "T");
   }
 
   if(millis()-check_server_timer>=1000 && wifi_connected)
@@ -186,7 +194,7 @@ void loop()
     request_temp_timer=millis();
     for(int id=0; id<ds.amount(); id++)
     {
-      if(ds.readTemp(id))
+      if(ds.readTemp(id) || 1==1)
       {
         float gotten_temp=ds.getTemp();
         temps_arr[id]=gotten_temp;
@@ -195,6 +203,7 @@ void loop()
           temp_generator+=0.1;
           if(temp_generator>50) temp_generator=0.0;
           temps_arr[id]=gotten_temp;
+          temps_arr[id]=temp_generator;
           String data_post="temp=";
           data_post+=temps_arr[id];
           data_post+="&dis_temp=";
@@ -259,29 +268,28 @@ void loop()
   if(wifi_connected) http.end();
 
   // GUI/UI ->
+  /*
   if(millis()-ui_timer>=1000)
   {
     ui_timer=millis();
+    
+    //String temps_str_arr[SENSORS_AMOUNT+1];
+    //for(int id=0; id<SENSORS_AMOUNT; id++)
+    //{
+    //  temps_str_arr[id]=temps_arr[id];
 
-    String temps_str_arr[SENSORS_AMOUNT+1];
-    for(int id=0; id<SENSORS_AMOUNT; id++)
-    {
-      temps_str_arr[id]=temps_arr[id];
+    //  if(temps_str_arr[id].length()>0) 
+    //  {
+    //    temps_str_arr[id].remove(temps_str_arr[id].length()-1);
+    //  }
+    //}
+    //String delta_str;
+    //delta_str=delta;
+    //if(delta_str.length()>0) 
+    //{
+    //  delta_str.remove(delta_str.length()-1);
+    //}
 
-      if(temps_str_arr[id].length()>0) 
-      {
-        temps_str_arr[id].remove(temps_str_arr[id].length()-1);
-      }
-    }
-
-    /*
-    String delta_str;
-    delta_str=delta;
-    if(delta_str.length()>0) 
-    {
-      delta_str.remove(delta_str.length()-1);
-    }
-    */
     lcd.setCursor(0, 0);
     lcd.print("                   ");
     lcd.setCursor(0, 0);
@@ -303,7 +311,7 @@ void loop()
     lcd.print("t");
     lcd.write((char)223);
     lcd.print("=");
-    lcd.print(temps_str_arr[0]);
+    lcd.print(temps_arr[0]);
 
     lcd.setCursor(0, 3);
     lcd.print("                   ");
@@ -314,13 +322,14 @@ void loop()
     lcd.print(en_water_temp);
     
 
-    /*
-    lcd.setCursor(0, 3);
-    lcd.print("                 ");
-    lcd.setCursor(0, 3);
-    lcd.print("Delta t");
-    lcd.write((char)223);
-    lcd.print(delta_str);
-    */
+    
+    //lcd.setCursor(0, 3);
+    //lcd.print("                 ");
+    //lcd.setCursor(0, 3);
+    //lcd.print("Delta t");
+    //lcd.write((char)223);
+    //lcd.print(delta_str);
+    
   }
+  */
 }
