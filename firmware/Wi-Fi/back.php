@@ -50,15 +50,26 @@ if(isset($_POST['request_temp']))
 {
   if($_POST['request_temp']=='last')
   {
-    $sql="SELECT `curr_temp`
-    FROM `pool_heating` 
+    $sql="SELECT `curr_temp`, `date`, `state`
+    FROM `pool_heating`
     ORDER BY id DESC LIMIT 1";
     $res=mysqli_query($db_connect, $sql);
     $rows_ms=mysqli_fetch_assoc($res);
+    $gotten_date=strtotime($rows_ms['date']);
+    $curr_date=strtotime(date('Y-m-d H:i:s'));
+    $result_state='';
+    if(($curr_date-$gotten_date)>=180)
+    {
+      $result_state='old';
+    }
+    else 
+    {
+      $result_state='ok';
+    }
 
     $data_final=
     [
-      ['curr_temp' => $rows_ms['curr_temp']]
+      ['curr_temp' => $rows_ms['curr_temp'], 'state' => $result_state, 'date' => $rows_ms['date'], 'status' => $rows_ms['state']]
     ];
 
     header('Content-Type: application/json');
@@ -80,17 +91,6 @@ if(isset($_POST['enable_temp']))
   {
     $gotten_enable_temp=floatval($_POST['enable_temp']);
   }
-}
-else
-{ 
-  /*
-  $file_data=file_get_contents('post_pool_temp_data.txt');
-  if($file_data!==false)
-  {
-    $file_decoded_data=json_decode($file_data, true);
-    $gotten_enable_temp=intval($file_decoded_data['enable_temp']);
-  }
-  */
 }
 
 if($gotten_disable_temp>=$gotten_enable_temp)
@@ -186,13 +186,16 @@ if(1==1 || $_SERVER['REQUEST_METHOD']=='POST')
   */
 }
 
+$_POST['state']='0';
 if(isset($_POST['temp']))
 {
   $sql="INSERT IGNORE INTO `pool_heating` SET
     `date`='".date('Y-m-d H:i:s')."',
     `curr_temp`='".$_POST['temp']."',
     `dis_temp`='".$_POST['dis_temp']."',
-    `en_temp`='".$_POST['en_temp']."'";
+    `en_temp`='".$_POST['en_temp']."',
+    `state`='".$_POST['state']."'
+  ";
 
   mysqli_query($db_connect, $sql);
 }
