@@ -2,7 +2,7 @@
 #include <ESP8266HTTPClient.h>
 #include <GSON.h>
 
-#define SSID "---"
+#define SSID "--"
 #define PASS "---"
 
 //#include <LiquidCrystal_I2C.h>
@@ -239,15 +239,27 @@ void loop()
         }
       } //for
       //--
-      bool state;
+      // Керування реле -->>
       if(temps_arr[0]>=en_water_temp && !curr_state)
       {
-        state=true;
+        digitalWrite(4, 0); // turn on. 0 is on, it's not a mistake!
+        curr_state=1;
+
+        time_spent_s = 0;
+        time_spent_m = 0;
+        time_spent_h = 0;
       }
       else if(temps_arr[0]<=dis_water_temp && curr_state)
       {
-        state=false;
+        digitalWrite(4, 1);
+        curr_state=0;
+
+        time_spent_s = 0;
+        time_spent_m = 0;
+        time_spent_h = 0;
       }
+      // Керування реле --<<
+
       String data_post="temp=";
       data_post+=temps_arr[0];
       data_post+="&dis_temp=";
@@ -255,7 +267,7 @@ void loop()
       data_post+="&en_temp=";
       data_post+=en_water_temp;
       data_post+="&state=";
-      data_post+=state;
+      data_post+=curr_state;
         
       int httpCode = http.POST(data_post);
       http.end();
@@ -307,29 +319,27 @@ void loop()
       }
       ds.requestTemp();
     }   
+    // Керування реле -->>
+    if(temps_arr[0]>=en_water_temp && !curr_state)
+    {
+      digitalWrite(4, 0); // turn on. 0 is on, it's not a mistake!
+      curr_state=1;
+
+      time_spent_s = 0;
+      time_spent_m = 0;
+      time_spent_h = 0;
+    }
+    else if(temps_arr[0]<=dis_water_temp && curr_state)
+    {
+      digitalWrite(4, 1);
+      curr_state=0;
+
+      time_spent_s = 0;
+      time_spent_m = 0;
+      time_spent_h = 0;
+    }
+    // Керування реле --<<
   }
-
-
-  // Керування реле -->>
-  if(temps_arr[0]>=en_water_temp && !curr_state)
-  {
-    digitalWrite(4, 0); // turn on. 0 is on, it's not a mistake!
-    curr_state=1;
-
-    time_spent_s = 0;
-    time_spent_m = 0;
-    time_spent_h = 0;
-  }
-  else if(temps_arr[0]<=dis_water_temp && curr_state)
-  {
-    digitalWrite(4, 1);
-    curr_state=0;
-
-    time_spent_s = 0;
-    time_spent_m = 0;
-    time_spent_h = 0;
-  }
-  // Керування реле --<<
 
 
   // GUI/UI ->
